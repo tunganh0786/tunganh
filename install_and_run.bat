@@ -2,6 +2,8 @@
 setlocal EnableDelayedExpansion
 
 :: Định nghĩa các biến
+set "PYTHON_URL=https://www.python.org/ftp/python/3.11.5/python-3.11.5-amd64.exe"
+set "PYTHON_INSTALLER=python-installer.exe"
 set "PYTHON_SCRIPT=script.py"
 
 :: Ghi log để debug
@@ -29,9 +31,26 @@ if %ERRORLEVEL% equ 0 (
     )
 )
 
-:: Cài đặt Python bằng winget
-echo Installing Python using winget... >> log.txt
-winget install --id Python.Python.3.11 --source winget --accept-package-agreements --accept-source-agreements || (echo Error: Failed to install Python using winget. >> log.txt && echo Error: Failed to install Python using winget. && pause && exit /b 1)
+:: Tải Python installer
+echo Downloading Python installer... >> log.txt
+powershell -Command "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile '%PYTHON_INSTALLER%'" || (echo Error: Failed to download Python installer. >> log.txt && echo Error: Failed to download Python installer. && pause && exit /b 1)
+
+:: Kiểm tra file Python installer
+echo Verifying Python installer... >> log.txt
+if not exist "%PYTHON_INSTALLER%" (echo Error: Python installer not found after download. >> log.txt && echo Error: Python installer not found after download. && pause && exit /b 1)
+
+:: Kiểm tra kích thước file (khoảng 13-14 MB, tức 13,000,000 - 14,000,000 bytes)
+for %%F in (%PYTHON_INSTALLER%) do set "FILESIZE=%%~zF"
+if %FILESIZE% LSS 13000000 (echo Error: Python installer file is too small (%FILESIZE% bytes). It might be corrupted. >> log.txt && echo Error: Python installer file is too small (%FILESIZE% bytes). It might be corrupted. && pause && exit /b 1)
+if %FILESIZE% GTR 15000000 (echo Error: Python installer file is too large (%FILESIZE% bytes). It might be corrupted. >> log.txt && echo Error: Python installer file is too large (%FILESIZE% bytes). It might be corrupted. && pause && exit /b 1)
+
+:: Cài đặt Python (dùng /quiet, bỏ InstallAllUsers=1 để tránh lỗi quyền)
+echo Installing Python... >> log.txt
+%PYTHON_INSTALLER% /quiet PrependPath=1 Include_test=0 || (echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. >> log.txt && echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. && pause && exit /b 1)
+
+:: Xóa file Python installer
+echo Cleaning up Python installer... >> log.txt
+del %PYTHON_INSTALLER% || (echo Warning: Failed to delete Python installer. >> log.txt && echo Warning: Failed to delete Python installer. && pause)
 
 :: Cập nhật PATH
 set "PATH=%PATH%;%ProgramFiles%\Python311\Scripts\;%ProgramFiles%\Python311\"
