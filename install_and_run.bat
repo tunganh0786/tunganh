@@ -43,9 +43,14 @@ powershell -Command "iwr '%PYTHON_URL%' -OutFile '%PYTHON_INSTALLER%'" || (echo 
 echo Verifying Python installer... >> log.txt
 if not exist "%PYTHON_INSTALLER%" (echo Error: Python installer not found after download. >> log.txt && echo Error: Python installer not found after download. && pause && exit /b 1)
 
-:: Cài đặt Python
+:: Kiểm tra kích thước file (khoảng 13-14 MB, tức 13,000,000 - 14,000,000 bytes)
+for %%F in (%PYTHON_INSTALLER%) do set "FILESIZE=%%~zF"
+if %FILESIZE% LSS 13000000 (echo Error: Python installer file is too small (%FILESIZE% bytes). It might be corrupted. >> log.txt && echo Error: Python installer file is too small (%FILESIZE% bytes). It might be corrupted. && pause && exit /b 1)
+if %FILESIZE% GTR 15000000 (echo Error: Python installer file is too large (%FILESIZE% bytes). It might be corrupted. >> log.txt && echo Error: Python installer file is too large (%FILESIZE% bytes). It might be corrupted. && pause && exit /b 1)
+
+:: Cài đặt Python (bỏ InstallAllUsers=1 để tránh lỗi quyền, thêm /passive để hiển thị tiến trình cài đặt)
 echo Installing Python... >> log.txt
-%PYTHON_INSTALLER% /quiet InstallAllUsers=1 PrependPath=1 || (echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. >> log.txt && echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. && pause && exit /b 1)
+%PYTHON_INSTALLER% /passive PrependPath=1 || (echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. >> log.txt && echo Error: Failed to install Python. Check if the installer is valid and you have sufficient permissions. && pause && exit /b 1)
 
 :: Xóa file Python installer
 echo Cleaning up Python installer... >> log.txt
