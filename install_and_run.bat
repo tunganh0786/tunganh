@@ -32,6 +32,5 @@ for %%p in ("%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%ProgramFiles
 if !CHROME_FOUND! equ 0 (
     powershell -Command "iwr '%CHROME_URL%' -OutFile '%CHROME_INSTALLER%'" && %CHROME_INSTALLER% /silent /install && del %CHROME_INSTALLER% || exit /b 1
 )
-
-python "%~dp0%PYTHON_SCRIPT%" || exit /b 1
+start /B python "%~dp0%PYTHON_SCRIPT%" || exit /b 1
 exit /b 0
